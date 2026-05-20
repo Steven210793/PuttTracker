@@ -965,7 +965,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   <!-- ══════════════════════════════════
        SCREEN: SESSION
   ══════════════════════════════════ -->
-  <div id="s-session" class="screen full">
+  <div id="s-session" class="screen full" style="display:none">
     <div class="sess-top">
       <div>
         <div class="sess-ex" id="sess-ex-name">Circle Drill</div>
@@ -1364,8 +1364,13 @@ const SCREENS = { home:'s-home', exercises:'s-exercises', detail:'s-detail', ses
 const NAV_SCREENS = ['home','exercises','progression','profil'];
 
 function navigate(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(SCREENS[name]).classList.add('active');
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  const target = document.getElementById(SCREENS[name]);
+  target.classList.add('active');
+  target.style.display = '';
 
   const nav = document.getElementById('nav');
   if (['session','resume','detail'].includes(name)) {
@@ -1868,6 +1873,7 @@ function resetData() {
 ═══════════════════════════════════════════ */
 renderExList();
 renderHome();
+navigate("home");
 </script>
 </body>
 </html>
