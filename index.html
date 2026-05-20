@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080808">
+<title>PuttTracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   VARIABLES & RESET
+═══════════════════════════════════════════ */
+:root {
+  --bg:     #080808;
+  --bg2:    #101010;
+  --bg3:    #161616;
+  --bg4:    #1e1e1e;
+  --bg5:    #262626;
+  --green:       #4db84d;
+  --green-hi:    #6dd96d;
+  --green-lo:    #2d6e2d;
+  --green-glow:  rgba(77,184,77,.18);
+  --red:         #c0392b;
+  --red-hi:      #e74c3c;
+  --red-glow:    rgba(192,57,43,.18);
+  --amber:       #e8a020;
+  --white:  #efefef;
+  --muted:  #888;
+  --dim:    #444;
+  --border: rgba(255,255,255,.07);
+  --font-d: 'Oswald', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --nav-h:  64px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; background: var(--bg); overscroll-behavior: none; }
+body {
+  font-family: var(--font-b);
+  color: var(--white);
+  background: var(--bg);
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+::-webkit-scrollbar { display: none; }
+
+/* ═══════════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════════ */
+#app {
+  width: 100%;
+  height: 100dvh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── SCREENS ─── */
+.screen {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--nav-h) + 20px + env(safe-area-inset-bottom,0px));
+  animation: fadeIn .18s ease;
+}
+.screen.active { display: block; }
+.screen.full {
+  padding-bottom: 0;
+  display: none;
+  flex-direction: column;
+}
+.screen.full.active { display: flex; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ─── BOTTOM NAV ─── */
+#nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
+  padding-bottom: env(safe-area-inset-bottom,0px);
+  background: rgba(8,8,8,.97);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 200;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+#nav.hidden { display: none; }
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0 2px;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.nav-btn svg { width: 22px; height: 22px; stroke: var(--dim); fill: none; stroke-width: 1.8; transition: stroke .2s; }
+.nav-btn span { font-size: 10px; font-weight: 500; color: var(--dim); letter-spacing: .04em; transition: color .2s; }
+.nav-btn.active svg { stroke: var(--green-hi); }
+.nav-btn.active span { color: var(--green-hi); }
+
+/* ─── FLASH OVERLAY ─── */
+#flash {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0;
+  transition: opacity .08s;
+}
+#flash.g { background: rgba(77,184,77,.09); opacity: 1; }
+#flash.r { background: rgba(192,57,43,.09); opacity: 1; }
+
+/* ═══════════════════════════════════════════
+   SHARED ELEMENTS
+═══════════════════════════════════════════ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  position: sticky; top: 0;
+  background: rgba(8,8,8,.95);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title {
+  font-family: var(--font-d);
+  font-size: 19px;
+  letter-spacing: .1em;
+  font-weight: 500;
+}
+.icon-btn {
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background .15s;
+}
+.icon-btn:active { background: var(--bg4); }
+.icon-btn svg { stroke: var(--white); fill: none; width: 20px; height: 20px; stroke-width: 1.8; }
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--green-hi);
+  margin-bottom: 8px;
+}
+
+.pill-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--muted);
+  transition: all .15s;
+}
+.pill-btn.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #000;
+}
+
+.btn-green {
+  width: 100%;
+  background: var(--green);
+  color: #000;
+  font-family: var(--font-d);
+  font-size: 19px;
+  letter-spacing: .12em;
+  font-weight: 500;
+  border-radius: 14px;
+  padding: 18px;
+  transition: transform .1s, background .1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-green:active { transform: scale(.975); background: var(--green-hi); }
+
+/* ═══════════════════════════════════════════
+   SCREEN: HOME
+═══════════════════════════════════════════ */
+#s-home .hero {
+  padding: 32px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.logo-icon {
+  width: 68px; height: 68px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.logo-icon::before {
+  content: '';
+  position: absolute;
+  top: -20px; left: -20px;
+  width: 60px; height: 60px;
+  background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
+}
+.logo-icon svg { width: 38px; height: 38px; }
+.logo-name {
+  font-family: var(--font-d);
+  font-size: 26px;
+  letter-spacing: .22em;
+  font-weight: 400;
+  color: var(--white);
+}
+.logo-tagline {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.logo-tagline em { color: var(--green-hi); font-style: normal; }
+
+.user-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px 18px;
+}
+.user-text .name { font-size: 17px; font-weight: 600; }
+.user-text .level { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.streak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.streak .fire { font-size: 16px; }
+.streak .days { color: var(--green-hi); }
+
+#s-home .cta-wrap { padding: 0 18px 16px; }
+.main-cta {
+  width: 100%;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-hi) 100%);
+  color: #000;
+  font-family: var(--font-d);
+  font-size: 21px;
+  letter-spacing: .14em;
+  font-weight: 500;
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: 0 10px 36px rgba(77,184,77,.22);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform .1s, box-shadow .1s;
+  position: relative; overflow: hidden;
+}
+.main-cta::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: rgba(255,255,255,.08);
+  border-radius: 18px 18px 0 0;
+}
+.main-cta:active { transform: scale(.975); box-shadow: 0 4px 18px rgba(77,184,77,.15); }
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 18px 16px;
+}
+.qcard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color .15s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.qcard:active { border-color: var(--green-lo); }
+.qcard .qc-icon svg { stroke: var(--green-hi); fill: none; width: 20px; height: 20px; stroke-width: 1.8; }
+.qcard .qc-title { font-size: 13px; font-weight: 600; }
+.qcard .qc-sub { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.qcard .qc-arrow { font-size: 16px; color: var(--dim); }
+
+.last-card {
+  margin: 0 18px 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.last-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.last-name { font-size: 14px; font-weight: 600; }
+.last-date { font-size: 11px; color: var(--muted); }
+.last-stats { display: flex; gap: 24px; }
+.ls-val { font-family: var(--font-d); font-size: 26px; color: var(--green-hi); }
+.ls-lbl { font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 1px; }
+.sparkwrap { margin-top: 12px; height: 36px; }
+.sparkwrap svg { width: 100%; height: 100%; }
+
+/* ═══════════════════════════════════════════
+   SCREEN: EXERCISES
+═══════════════════════════════════════════ */
+.filter-row {
+  display: flex;
+  gap: 7px;
+  padding: 12px 18px;
+  overflow-x: auto;
+}
+.ex-list { padding: 0 18px; display: flex; flex-direction: column; gap: 11px; }
+
+.ex-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  cursor: pointer;
+  transition: border-color .15s, background .12s;
+}
+.ex-card:active { border-color: var(--green-lo); background: var(--bg3); }
+.ex-ico {
+  width: 48px; height: 48px; flex-shrink: 0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ex-ico svg { stroke: var(--green-hi); fill: none; width: 22px; height: 22px; stroke-width: 1.7; }
+.ex-body { flex: 1; min-width: 0; }
+.ex-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.ex-desc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.ex-time { font-size: 12px; color: var(--muted); }
+.badge {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 9px; border-radius: 10px; letter-spacing: .04em;
+}
+.b-d { background: rgba(77,184,77,.12); color: var(--green-hi); }
+.b-i { background: rgba(232,160,32,.12); color: var(--amber); }
+.b-a { background: rgba(192,57,43,.12); color: var(--red-hi); }
+
+/* ═══════════════════════════════════════════
+   SCREEN: DETAIL
+═══════════════════════════════════════════ */
+#s-detail { background: var(--bg); }
+
+.detail-hero {
+  padding: 22px 18px 18px;
+  background: linear-gradient(180deg, var(--bg3) 0%, var(--bg) 100%);
+}
+.detail-eyebrow {
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--green-hi); margin-bottom: 8px;
+}
+.detail-title {
+  font-family: var(--font-d);
+  font-size: 40px;
+  letter-spacing: .06em;
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.detail-obj { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+.detail-visual {
+  margin: 0 18px 18px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  height: 178px;
+  display: flex; align-items: center; justify-content: center;
+}
+.detail-visual svg { width: 100%; height: 100%; }
+
+.detail-tags-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 0 18px 16px;
+}
+.dtag {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 12px; color: var(--muted); font-weight: 500;
+}
+
+.detail-block { padding: 0 18px 16px; }
+.db-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--green-hi); margin-bottom: 10px;
+}
+.db-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.db-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.db-list li {
+  font-size: 14px; color: var(--muted); padding-left: 16px;
+  position: relative; line-height: 1.5;
+}
+.db-list li::before { content:'•'; position: absolute; left:0; color: var(--green-hi); }
+
+.detail-cta { padding: 8px 18px 22px; }
+
+/* ═══════════════════════════════════════════
+   SCREEN: SESSION
+═══════════════════════════════════════════ */
+#s-session {
+  background: var(--bg);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+#s-session.active { display: flex; }
+
+.sess-top {
+  padding: 14px 18px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sess-ex { font-family: var(--font-d); font-size: 19px; letter-spacing: .08em; font-weight: 500; }
+.sess-serie { font-size: 13px; color: var(--muted); font-weight: 500; }
+.sess-serie b { color: var(--green-hi); }
+
+.sess-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 18px;
+  gap: 18px;
+  overflow: hidden;
+}
+
+.score-display { text-align: center; }
+.score-lbl {
+  font-size: 10px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.score-num {
+  font-family: var(--font-d);
+  font-size: 86px;
+  line-height: 1;
+  letter-spacing: .02em;
+  font-weight: 400;
+  color: var(--white);
+}
+.score-num .sep { color: var(--dim); }
+
+.dot-row {
+  display: flex; gap: 9px; flex-wrap: wrap; justify-content: center; max-width: 300px;
+}
+.pdot {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 2px solid var(--bg5);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  transition: background .2s, border-color .2s, transform .15s;
+  flex-shrink: 0;
+}
+.pdot.made { background: var(--green); border-color: var(--green); color: #000; transform: scale(1.05); }
+.pdot.missed { background: var(--red); border-color: var(--red); color: #fff; }
+
+.action-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+.abtn {
+  border: none;
+  border-radius: 18px;
+  padding: 20px 10px;
+  font-family: var(--font-d);
+  font-size: 22px;
+  letter-spacing: .1em;
+  font-weight: 500;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  cursor: pointer;
+  transition: transform .1s;
+  position: relative; overflow: hidden;
+}
+.abtn::after {
+  content:''; position: absolute; top:0; left:0; right:0;
+  height: 40%; background: rgba(255,255,255,.07);
+}
+.abtn-made {
+  background: var(--green);
+  color: #000;
+  box-shadow: 0 8px 24px rgba(77,184,77,.2);
+}
+.abtn-made:active { transform: scale(.95); box-shadow: none; }
+.abtn-missed {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(192,57,43,.2);
+}
+.abtn-missed:active { transform: scale(.95); box-shadow: none; }
+.abtn-icon { font-size: 26px; }
+
+.sess-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 13px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+  padding-bottom: calc(13px + env(safe-area-inset-bottom,0px));
+}
+.ss-item { text-align: center; }
+.ss-val { font-family: var(--font-d); font-size: 20px; color: var(--green-hi); font-weight: 400; }
+.ss-lbl { font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+
+/* ═══════════════════════════════════════════
+   SCREEN: RÉSUMÉ
+═══════════════════════════════════════════ */
+#s-resume { background: var(--bg); }
+
+.resume-hero {
+  padding: 28px 18px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.ring-wrap {
+  position: relative; width: 164px; height: 164px; margin-bottom: 8px;
+}
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ring-score {
+  font-family: var(--font-d);
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: .04em;
+  line-height: 1;
+}
+.ring-pct {
+  font-family: var(--font-d);
+  font-size: 22px;
+  color: var(--green-hi);
+  font-weight: 400;
+}
+.record-pill {
+  background: rgba(77,184,77,.1);
+  border: 1px solid var(--green-lo);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px; font-weight: 700;
+  color: var(--green-hi); letter-spacing: .06em;
+}
+
+.xp-row {
+  margin: 0 18px 14px;
+  background: linear-gradient(135deg, rgba(77,184,77,.08), rgba(77,184,77,.03));
+  border: 1px solid var(--green-lo);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.xp-num { font-family: var(--font-d); font-size: 30px; color: var(--green-hi); font-weight: 400; }
+.xp-label { font-size: 11px; color: var(--muted); letter-spacing: .08em; line-height: 1.5; }
+.xp-label b { display: block; color: var(--white); font-size: 13px; }
+
+.resume-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 9px;
+  margin: 0 18px 16px;
+}
+.rg-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 13px 8px;
+  text-align: center;
+}
+.rg-val { font-family: var(--font-d); font-size: 21px; font-weight: 400; }
+.rg-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
+
+.hist-block { padding: 0 18px 16px; }
+.hist-title { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.hist-sets { display: flex; flex-wrap: wrap; gap: 8px; }
+.hset {
+  display: flex; gap: 4px; align-items: center;
+  padding: 7px 10px;
+  background: var(--bg2); border-radius: 10px; border: 1px solid var(--border);
+}
+.hdot {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800;
+}
+.hdot.m { background: var(--green); color: #000; }
+.hdot.x { background: var(--red); color: #fff; }
+
+.resume-cta { padding: 4px 18px 22px; }
+
+/* ═══════════════════════════════════════════
+   SCREEN: PROGRESSION
+═══════════════════════════════════════════ */
+.pi-card {
+  margin: 14px 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+}
+.pi-left {}
+.pi-sublbl { font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.pi-num { font-family: var(--font-d); font-size: 58px; font-weight: 400; line-height: 1; }
+.pi-delta {
+  display: flex; align-items: center; gap: 5px; margin-top: 4px;
+  font-size: 13px; color: var(--muted);
+}
+.pi-delta .arr-d { color: var(--green-hi); }
+.pi-delta .arr-u { color: var(--red-hi); }
+
+.pi-right { text-align: right; }
+.pi-spark { height: 48px; width: 100px; }
+.pi-spark svg { width: 100%; height: 100%; overflow: visible; }
+
+.prog-section { padding: 0 18px 14px; }
+.prog-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+}
+.chart-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.chart-area {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  height: 148px;
+  overflow: hidden;
+}
+.chart-area svg { width: 100%; height: 100%; overflow: visible; }
+
+.overview-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 9px; margin: 0 18px 14px;
+}
+.ov-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 13px 8px; text-align: center;
+}
+.ov-val { font-family: var(--font-d); font-size: 17px; color: var(--green-hi); font-weight: 400; }
+.ov-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+
+/* Distance tab */
+.dist-tab-row { display: flex; gap: 6px; padding: 0 18px 12px; }
+.dist-list { padding: 0 18px; display: flex; flex-direction: column; gap: 11px; }
+.dist-item {}
+.dist-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.dist-name { font-size: 14px; font-weight: 600; }
+.dist-pct { font-family: var(--font-d); font-size: 16px; font-weight: 400; }
+.dist-bar {
+  height: 7px; background: var(--bg3); border-radius: 4px; overflow: hidden;
+}
+.dist-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+
+.zones-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 14px 18px 0; }
+.zone-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.zone-lbl { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; }
+.zone-box.strong .zone-lbl { color: var(--green-hi); }
+.zone-box.weak .zone-lbl { color: var(--amber); }
+.zone-val { font-size: 16px; font-weight: 600; }
+
+/* Records tab */
+.records-list { padding: 0 18px; display: flex; flex-direction: column; gap: 9px; }
+.rec-row {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 13px;
+}
+.rec-ico {
+  width: 40px; height: 40px; flex-shrink: 0;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.rec-body { flex: 1; }
+.rec-title { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.rec-val { font-family: var(--font-d); font-size: 20px; font-weight: 400; }
+.rec-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════
+   SCREEN: PROFIL
+═══════════════════════════════════════════ */
+.profile-hero {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 18px 20px; gap: 10px;
+}
+.avatar {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, var(--green-lo), var(--green));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-d);
+  font-size: 28px;
+  color: #000;
+  font-weight: 500;
+}
+.profile-name { font-size: 20px; font-weight: 600; }
+.profile-email { font-size: 13px; color: var(--muted); }
+.level-badge {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 16px;
+  font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 5px;
+}
+.level-badge .lvl-num { color: var(--green-hi); }
+
+.xp-bar-wrap { width: 100%; padding: 0 18px 20px; }
+.xp-bar-hdr { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.xp-bar-bg { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.xp-bar-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width .6s; }
+
+.settings-list { padding: 0 18px; display: flex; flex-direction: column; gap: 1px; margin-bottom: 20px; }
+.srow {
+  background: var(--bg2);
+  padding: 15px 16px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.srow:first-child { border-radius: 14px 14px 0 0; }
+.srow:last-child { border-radius: 0 0 14px 14px; }
+.srow:only-child { border-radius: 14px; }
+.srow:active { background: var(--bg3); }
+.srow svg { stroke: var(--green-hi); fill: none; width: 18px; height: 18px; stroke-width: 1.8; flex-shrink: 0; }
+.srow span { font-size: 14px; flex: 1; }
+.srow .sarrow { color: var(--dim); font-size: 14px; }
+
+.stoggle {
+  width: 42px; height: 24px;
+  background: var(--bg5);
+  border-radius: 12px;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.stoggle.on { background: var(--green); }
+.stoggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: var(--white);
+  border-radius: 50%;
+  transition: transform .2s;
+}
+.stoggle.on::after { transform: translateX(18px); }
+
+/* ═══════════════════════════════════════════
+   PROG TABS
+═══════════════════════════════════════════ */
+.prog-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding: 0 18px;
+  gap: 0;
+  overflow-x: auto;
+}
+.ptab {
+  padding: 12px 16px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.ptab.active { color: var(--green-hi); border-bottom-color: var(--green-hi); }
+
+.ptab-panel { display: none; }
+.ptab-panel.active { display: block; }
+
+/* ═══════════════════════════════════════════
+   PROGRESS RING ANIMATION
+═══════════════════════════════════════════ */
+@keyframes ringDraw {
+  from { stroke-dashoffset: 440; }
+}
+.ring-path { animation: ringDraw .8s ease forwards; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- FLASH -->
+  <div id="flash"></div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: HOME
+  ══════════════════════════════════ -->
+  <div id="s-home" class="screen active">
+    <div class="hero">
+      <div class="logo-wrap">
+        <div class="logo-icon">
+          <!-- P logo SVG inspired by provided logo -->
+          <svg viewBox="0 0 38 42" fill="none">
+            <path d="M10 6 L10 36" stroke="url(#lg1)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M10 6 Q26 6 26 16 Q26 26 10 26" stroke="url(#lg1)" stroke-width="3" stroke-linecap="round" fill="none"/>
+            <ellipse cx="19" cy="38" rx="9" ry="2.5" fill="rgba(255,255,255,.18)"/>
+            <defs>
+              <linearGradient id="lg1" x1="10" y1="6" x2="26" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#6dd96d"/>
+                <stop offset="100%" stop-color="#4db84d"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="logo-name">PUTTTRACKER</div>
+        <div class="logo-tagline">DEVENEZ MEILLEUR SUR <em>CHAQUE PUTT</em></div>
+      </div>
+    </div>
+
+    <div class="user-row">
+      <div class="user-text">
+        <div class="name" id="home-username">Steven</div>
+        <div class="level" id="home-level">Niveau 3 · 340 XP</div>
+      </div>
+      <div class="streak">
+        <span class="fire">🔥</span>
+        <span class="days" id="home-streak">3</span>
+        <span style="color:var(--muted);font-size:12px">jours</span>
+      </div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="main-cta" onclick="goToExercises()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.7)" stroke-width="2" stroke-linecap="round" width="22" height="22">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+        COMMENCER UN ENTRAÎNEMENT
+      </button>
+    </div>
+
+    <div class="quick-grid">
+      <div class="qcard" onclick="navigate('exercises')">
+        <div class="qc-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="qc-title">EXERCICES</div>
+        <div class="qc-sub">Entraînez-vous avec des drills ciblés</div>
+        <div class="qc-arrow">→</div>
+      </div>
+      <div class="qcard" onclick="navigate('progression')">
+        <div class="qc-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="qc-title">PROGRESSION</div>
+        <div class="qc-sub">Analysez vos performances</div>
+        <div class="qc-arrow">→</div>
+      </div>
+    </div>
+
+    <div class="last-card" id="last-session-card">
+      <div class="last-hdr">
+        <div>
+          <div class="section-label" style="margin-bottom:2px">DERNIÈRE SESSION</div>
+          <div class="last-name" id="last-name">Circle Drill</div>
+        </div>
+        <div class="last-date" id="last-date">Aujourd'hui</div>
+      </div>
+      <div class="last-stats">
+        <div><div class="ls-val" id="last-score">28/30</div><div class="ls-lbl">SCORE</div></div>
+        <div><div class="ls-val" id="last-pct">93%</div><div class="ls-lbl">RÉUSSITE</div></div>
+      </div>
+      <div class="sparkwrap">
+        <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4db84d" stop-opacity=".3"/>
+              <stop offset="100%" stop-color="#4db84d" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path id="spark-path" fill="url(#spark-grad)" opacity=".8"/>
+          <path id="spark-line" fill="none" stroke="#4db84d" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: EXERCISES
+  ══════════════════════════════════ -->
+  <div id="s-exercises" class="screen">
+    <div class="topbar">
+      <span class="topbar-title">EXERCICES</span>
+      <div class="icon-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+    </div>
+    <div class="filter-row">
+      <button class="pill-btn active" onclick="filterEx(this,'all')">TOUS</button>
+      <button class="pill-btn" onclick="filterEx(this,'Débutant')">DÉBUTANT</button>
+      <button class="pill-btn" onclick="filterEx(this,'Intermédiaire')">INTERMÉDIAIRE</button>
+      <button class="pill-btn" onclick="filterEx(this,'Avancé')">AVANCÉ</button>
+    </div>
+    <div class="ex-list" id="ex-list"></div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: DETAIL
+  ══════════════════════════════════ -->
+  <div id="s-detail" class="screen">
+    <div class="topbar" style="position:sticky;top:0;background:rgba(8,8,8,.95);backdrop-filter:blur(10px);z-index:10;border-bottom:1px solid var(--border)">
+      <div class="icon-btn" onclick="navigate('exercises')">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <span class="topbar-title" id="detail-topbar-title"></span>
+      <div class="icon-btn">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: SESSION
+  ══════════════════════════════════ -->
+  <div id="s-session" class="screen full">
+    <div class="sess-top">
+      <div>
+        <div class="sess-ex" id="sess-ex-name">Circle Drill</div>
+        <div class="sess-serie">Série <b id="sess-serie-cur">1</b> / <span id="sess-serie-tot">3</span></div>
+      </div>
+      <button class="pill-btn" onclick="confirmEndSession()" style="font-size:11px;padding:5px 12px">Terminer</button>
+    </div>
+
+    <div class="sess-main">
+      <div class="score-display">
+        <div class="score-lbl">PUTT ACTUEL</div>
+        <div class="score-num">
+          <span id="sess-made">0</span><span class="sep"> / </span><span id="sess-total">6</span>
+        </div>
+      </div>
+      <div class="dot-row" id="dot-row"></div>
+      <div class="action-btns">
+        <button class="abtn abtn-made" onclick="recordPutt(true)">
+          <span class="abtn-icon">✓</span>RENTRÉ
+        </button>
+        <button class="abtn abtn-missed" onclick="recordPutt(false)">
+          <span class="abtn-icon">✕</span>RATÉ
+        </button>
+      </div>
+    </div>
+
+    <div class="sess-stats">
+      <div class="ss-item"><div class="ss-val" id="stat-pct">0%</div><div class="ss-lbl">RÉUSSITE</div></div>
+      <div class="ss-item"><div class="ss-val" id="stat-streak">0</div><div class="ss-lbl">SÉRIE MAX</div></div>
+      <div class="ss-item"><div class="ss-val" id="stat-score">0/0</div><div class="ss-lbl">SCORE</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: RÉSUMÉ
+  ══════════════════════════════════ -->
+  <div id="s-resume" class="screen">
+    <div class="topbar">
+      <div class="icon-btn" onclick="navigate('home')">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <span class="topbar-title">RÉSUMÉ</span>
+      <div class="icon-btn">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </div>
+    </div>
+
+    <div class="resume-hero">
+      <div class="ring-wrap">
+        <svg width="164" height="164" viewBox="0 0 164 164">
+          <circle cx="82" cy="82" r="70" fill="none" stroke="var(--bg3)" stroke-width="10"/>
+          <circle id="ring-fill" cx="82" cy="82" r="70" fill="none" stroke="var(--green)" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="440" stroke-dashoffset="440" class="ring-path"/>
+        </svg>
+        <div class="ring-inner">
+          <div class="ring-score" id="resume-score">28/30</div>
+          <div class="ring-pct" id="resume-pct">93%</div>
+        </div>
+      </div>
+      <div class="record-pill" id="resume-record" style="display:none">🏆 NOUVEAU RECORD !</div>
+    </div>
+
+    <div class="xp-row">
+      <div class="xp-num" id="resume-xp">+85</div>
+      <div class="xp-label"><b>XP GAGNÉE</b>Session complétée</div>
+    </div>
+
+    <div class="resume-grid">
+      <div class="rg-box"><div class="rg-val" id="res-series">3/3</div><div class="rg-lbl">SÉRIES</div></div>
+      <div class="rg-box"><div class="rg-val" id="res-streak">12</div><div class="rg-lbl">SÉRIE MAX</div></div>
+      <div class="rg-box"><div class="rg-val" id="res-time">05:24</div><div class="rg-lbl">TEMPS</div></div>
+    </div>
+
+    <div class="hist-block">
+      <div class="hist-title">HISTORIQUE DES PUTTS</div>
+      <div class="hist-sets" id="hist-sets"></div>
+    </div>
+
+    <div class="resume-cta">
+      <button class="btn-green" onclick="navigate('home')">TERMINER</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: PROGRESSION
+  ══════════════════════════════════ -->
+  <div id="s-progression" class="screen">
+    <div class="topbar">
+      <span class="topbar-title">PROGRESSION</span>
+      <div class="icon-btn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    </div>
+
+    <div class="prog-tabs">
+      <div class="ptab active" onclick="switchProgTab(this,'tab-index')">INDEX</div>
+      <div class="ptab" onclick="switchProgTab(this,'tab-distance')">PAR DISTANCE</div>
+      <div class="ptab" onclick="switchProgTab(this,'tab-records')">RECORDS</div>
+    </div>
+
+    <!-- TAB: INDEX -->
+    <div id="tab-index" class="ptab-panel active">
+      <div class="pi-card">
+        <div class="pi-left">
+          <div class="pi-sublbl">PUTTING INDEX</div>
+          <div class="pi-num" id="pi-num">11.2</div>
+          <div class="pi-delta">
+            <span class="arr-d">▼</span>
+            <span id="pi-delta-val">-1.3 vs mois dernier</span>
+          </div>
+        </div>
+        <div class="pi-right">
+          <div class="pi-spark" id="pi-spark"></div>
+        </div>
+      </div>
+
+      <div class="prog-section">
+        <div class="prog-section-title">ÉVOLUTION</div>
+        <div class="chart-tabs">
+          <button class="pill-btn active" onclick="switchChart(this,'7j')">7J</button>
+          <button class="pill-btn" onclick="switchChart(this,'30j')">30J</button>
+          <button class="pill-btn" onclick="switchChart(this,'3m')">3M</button>
+          <button class="pill-btn" onclick="switchChart(this,'1a')">1AN</button>
+        </div>
+        <div class="chart-area" id="chart-area"></div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="ov-box"><div class="ov-val" id="ov-sessions">28</div><div class="ov-lbl">SESSIONS</div></div>
+        <div class="ov-box"><div class="ov-val" id="ov-time">14h32</div><div class="ov-lbl">TEMPS TOTAL</div></div>
+        <div class="ov-box"><div class="ov-val" id="ov-putts">523</div><div class="ov-lbl">PUTTS</div></div>
+      </div>
+    </div>
+
+    <!-- TAB: DISTANCE -->
+    <div id="tab-distance" class="ptab-panel">
+      <div class="dist-tab-row">
+        <button class="pill-btn active" onclick="switchDistTab(this,'dt-pct')">RÉUSSITE</button>
+        <button class="pill-btn" onclick="switchDistTab(this,'dt-nb')">NOMBRE DE PUTTS</button>
+      </div>
+      <div id="dt-pct" class="dist-list"></div>
+      <div id="dt-nb" class="dist-list" style="display:none"></div>
+      <div class="zones-grid">
+        <div class="zone-box strong">
+          <div class="zone-lbl">POINT FORT</div>
+          <div class="zone-val">1m – 1.5m</div>
+        </div>
+        <div class="zone-box weak">
+          <div class="zone-lbl">À TRAVAILLER</div>
+          <div class="zone-val">4m et plus</div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+    </div>
+
+    <!-- TAB: RECORDS -->
+    <div id="tab-records" class="ptab-panel">
+      <div style="height:14px"></div>
+      <div class="records-list" id="records-list"></div>
+      <div style="height:14px"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SCREEN: PROFIL
+  ══════════════════════════════════ -->
+  <div id="s-profil" class="screen">
+    <div class="topbar">
+      <span class="topbar-title">PROFIL</span>
+    </div>
+    <div class="profile-hero">
+      <div class="avatar" id="prof-avatar">S</div>
+      <div class="profile-name" id="prof-name">Steven</div>
+      <div class="profile-email">steven@email.com</div>
+      <div class="level-badge">Niveau <span class="lvl-num" id="prof-level">3</span> &nbsp;·&nbsp; Putting Apprentice</div>
+    </div>
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-hdr">
+        <span id="prof-xp">340 XP</span>
+        <span style="color:var(--muted)">500 XP → Niv. 4</span>
+      </div>
+      <div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:68%"></div></div>
+    </div>
+
+    <div class="settings-list">
+      <div class="srow">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Modifier le profil</span><span class="sarrow">›</span>
+      </div>
+      <div class="srow">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Notifications</span>
+        <div class="stoggle on" id="notif-toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="srow">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M4.93 4.93a10 10 0 0 0 14.14 14.14"/></svg>
+        <span>Thème</span><span class="sarrow" style="color:var(--muted);font-size:12px">Sombre</span>
+      </div>
+      <div class="srow">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Mes statistiques</span><span class="sarrow">›</span>
+      </div>
+    </div>
+
+    <div class="settings-list">
+      <div class="srow" onclick="resetData()">
+        <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        <span>Réinitialiser les données</span><span class="sarrow" style="color:var(--red-hi)">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       BOTTOM NAV
+  ══════════════════════════════════ -->
+  <nav id="nav">
+    <div class="nav-btn active" id="nb-home" onclick="navigate('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Accueil</span>
+    </div>
+    <div class="nav-btn" id="nb-exercises" onclick="navigate('exercises')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>Exercices</span>
+    </div>
+    <div class="nav-btn" id="nb-progression" onclick="navigate('progression')">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Progression</span>
+    </div>
+    <div class="nav-btn" id="nb-profil" onclick="navigate('profil')">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profil</span>
+    </div>
+  </nav>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════ */
+const EXERCISES = [
+  {
+    id: 'circle',
+    name: 'Circle Drill',
+    desc: 'Améliorez votre précision à courte distance.',
+    diff: 'Débutant',
+    time: '5 min',
+    obj: 'Améliorer la régularité et la précision des putts courts.',
+    setup: 'Placez 6 balles autour du trou à 1 mètre de distance en formant un cercle.',
+    rules: [
+      'Rentrez les 6 balles dans le trou.',
+      'Si vous en manquez une, recommencez depuis le début.',
+      'Objectif : réussir 3 séries complètes.'
+    ],
+    series: 3,
+    puttsPerSeries: 6,
+    distances: [1],
+    icon: 'circle'
+  },
+  {
+    id: 'ladder',
+    name: 'Ladder Drill',
+    desc: 'Travaillez votre contrôle de distance.',
+    diff: 'Intermédiaire',
+    time: '8 min',
+    obj: 'Développer le contrôle de la force et la précision sur différentes distances.',
+    setup: 'Placez 5 balles à 1m, 2m, 3m, 4m et 5m du trou.',
+    rules: [
+      'Puttez de la plus courte à la plus longue distance.',
+      'Objectif : rentrer chaque balle en 2 essais max.',
+      'Réussissez 2 séries complètes.'
+    ],
+    series: 2,
+    puttsPerSeries: 5,
+    distances: [1,2,3,4,5],
+    icon: 'ladder'
+  },
+  {
+    id: 'gate',
+    name: 'Gate Drill',
+    desc: 'Améliorez votre départ de putt.',
+    diff: 'Débutant',
+    time: '6 min',
+    obj: 'Assurer un alignement parfait de la face du putter au départ.',
+    setup: 'Placez deux tees à 30cm du trou, légèrement plus larges que votre putter.',
+    rules: [
+      'Puttez 6 balles à travers la porte.',
+      'Chaque contact de tee = raté.',
+      'Objectif : 6 passages propres en 3 séries.'
+    ],
+    series: 3,
+    puttsPerSeries: 6,
+    distances: [0.5, 1],
+    icon: 'gate'
+  },
+  {
+    id: '369',
+    name: '3-6-9 Drill',
+    desc: 'Contrôlez 3 distances essentielles.',
+    diff: 'Intermédiaire',
+    time: '10 min',
+    obj: 'Maîtriser les distances de 3, 6 et 9 mètres.',
+    setup: 'Placez 3 balles à 3m, 3 balles à 6m et 3 balles à 9m du trou.',
+    rules: [
+      'Puttez chaque groupe dans l\'ordre.',
+      'Comptez le total rentré sur 9.',
+      'Objectif : 7/9 ou plus sur 2 séries.'
+    ],
+    series: 2,
+    puttsPerSeries: 9,
+    distances: [3,6,9],
+    icon: '369'
+  },
+  {
+    id: 'pressure',
+    name: 'Pressure Drill',
+    desc: 'Entraînez-vous sous pression.',
+    diff: 'Avancé',
+    time: '10 min',
+    obj: 'Simuler la pression de compétition et renforcer la concentration.',
+    setup: 'Placez 10 balles à 1.5m autour du trou.',
+    rules: [
+      'Rentrez les 10 balles à la suite.',
+      'Si vous en ratez une, recommencez à 0.',
+      'Comptez le nombre de tentatives nécessaires.'
+    ],
+    series: 1,
+    puttsPerSeries: 10,
+    distances: [1.5],
+    icon: 'pressure'
+  },
+  {
+    id: 'random',
+    name: 'Random Drill',
+    desc: 'Travaillez votre régularité sur distances variées.',
+    diff: 'Avancé',
+    time: '12 min',
+    obj: 'Améliorer l\'adaptabilité et la lecture du green.',
+    setup: 'Placez 6 balles à des distances aléatoires entre 1m et 6m.',
+    rules: [
+      'Puttez les 6 balles sans ordre précis.',
+      'Notez chaque résultat.',
+      'Objectif : 4/6 sur 3 séries.'
+    ],
+    series: 3,
+    puttsPerSeries: 6,
+    distances: [1,2,3,4,5,6],
+    icon: 'random'
+  }
+];
+
+const RECORDS_DATA = [
+  { icon: '🔗', title: 'PLUS LONGUE SÉRIE', val: '27 putts', sub: '12 mars 2024' },
+  { icon: '🎯', title: 'MEILLEUR SCORE', val: '30 / 30', sub: 'Circle Drill · 9 avril 2024' },
+  { icon: '⏱', title: 'SESSION LA PLUS LONGUE', val: '78 min', sub: '15 mars 2024' },
+  { icon: '📊', title: 'PLUS DE PUTTS EN SESSION', val: '104 putts', sub: '8 mars 2024' },
+  { icon: '📏', title: 'PUTT LE PLUS LONG RÉUSSI', val: '7.2 m', sub: '22 mars 2024' },
+  { icon: '⭐', title: 'EXERCICE PRÉFÉRÉ', val: 'Circle Drill', sub: '42 sessions' }
+];
+
+const DIST_DATA = [
+  { dist: '0.5 m', pct: 98, nb: 48, color: '#4db84d' },
+  { dist: '1 m',   pct: 92, nb: 156, color: '#4db84d' },
+  { dist: '1.5 m', pct: 82, nb: 112, color: '#4db84d' },
+  { dist: '2 m',   pct: 74, nb: 88, color: '#6dd96d' },
+  { dist: '3 m',   pct: 51, nb: 72, color: '#e8a020' },
+  { dist: '4 m',   pct: 31, nb: 44, color: '#e8602b' },
+  { dist: '5 m+',  pct: 18, nb: 28, color: '#c0392b' }
+];
+
+/* Session state */
+let session = {
+  exercise: null,
+  series: 1,
+  putts: [],        // all putts flat
+  seriePutts: [],   // current serie putts
+  totalMade: 0,
+  totalAttempts: 0,
+  maxStreak: 0,
+  curStreak: 0,
+  startTime: null,
+  history: [],      // completed series snapshots
+};
+
+/* App state */
+let appData = JSON.parse(localStorage.getItem('putttracker_data') || 'null') || {
+  username: 'Steven',
+  level: 3,
+  xp: 340,
+  streak: 3,
+  sessions: [],
+  putting_index: 11.2
+};
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+const SCREENS = { home:'s-home', exercises:'s-exercises', detail:'s-detail', session:'s-session', resume:'s-resume', progression:'s-progression', profil:'s-profil' };
+const NAV_SCREENS = ['home','exercises','progression','profil'];
+
+function navigate(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(SCREENS[name]).classList.add('active');
+
+  const nav = document.getElementById('nav');
+  if (['session','resume','detail'].includes(name)) {
+    nav.classList.add('hidden');
+  } else {
+    nav.classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const nb = document.getElementById('nb-' + name);
+    if (nb) nb.classList.add('active');
+  }
+
+  if (name === 'progression') renderProgression();
+  if (name === 'home') renderHome();
+}
+
+function goToExercises() { navigate('exercises'); }
+
+/* ═══════════════════════════════════════════
+   EXERCISES LIST
+═══════════════════════════════════════════ */
+function getExIcon(icon) {
+  const icons = {
+    circle: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>',
+    ladder: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><line x1="8" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="16" y2="21"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="17" x2="16" y2="17"/></svg>',
+    gate: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="8" width="14" height="12" rx="1"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+    '369': '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><text x="2" y="17" font-size="12" font-family="Oswald,sans-serif" fill="#6dd96d" stroke="none">3·6·9</text></svg>',
+    pressure: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    random: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>'
+  };
+  return icons[icon] || icons.circle;
+}
+
+function diffClass(d) {
+  return d === 'Débutant' ? 'b-d' : d === 'Intermédiaire' ? 'b-i' : 'b-a';
+}
+
+let currentFilter = 'all';
+
+function filterEx(btn, val) {
+  document.querySelectorAll('.filter-row .pill-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = val;
+  renderExList();
+}
+
+function renderExList() {
+  const list = document.getElementById('ex-list');
+  const filtered = currentFilter === 'all' ? EXERCISES : EXERCISES.filter(e => e.diff === currentFilter);
+  list.innerHTML = filtered.map(ex => `
+    <div class="ex-card" onclick="openDetail('${ex.id}')">
+      <div class="ex-ico">${getExIcon(ex.icon)}</div>
+      <div class="ex-body">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-desc">${ex.desc}</div>
+      </div>
+      <div class="ex-right">
+        <div class="ex-time">${ex.time}</div>
+        <div class="badge ${diffClass(ex.diff)}">${ex.diff}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════
+   DETAIL
+═══════════════════════════════════════════ */
+function openDetail(id) {
+  const ex = EXERCISES.find(e => e.id === id);
+  if (!ex) return;
+  document.getElementById('detail-topbar-title').textContent = ex.name;
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-hero">
+      <div class="detail-eyebrow">${ex.diff} · ${ex.time}</div>
+      <div class="detail-title">${ex.name}</div>
+      <div class="detail-obj">${ex.obj}</div>
+    </div>
+    <div class="detail-visual">${renderGreenViz(ex)}</div>
+    <div class="detail-tags-row">
+      <div class="dtag">⏱ ${ex.time}</div>
+      <div class="dtag">🔁 ${ex.series} série${ex.series>1?'s':''}</div>
+      <div class="dtag">⛳ ${ex.puttsPerSeries} putts/série</div>
+      <div class="dtag">${ex.diff}</div>
+    </div>
+    <div class="detail-block">
+      <div class="db-title">MISE EN PLACE</div>
+      <div class="db-text">${ex.setup}</div>
+    </div>
+    <div class="detail-block">
+      <div class="db-title">RÈGLES</div>
+      <ul class="db-list">${ex.rules.map(r=>`<li>${r}</li>`).join('')}</ul>
+    </div>
+    <div class="detail-cta">
+      <button class="btn-green" onclick="startSession('${ex.id}')">COMMENCER L'EXERCICE</button>
+    </div>
+  `;
+  navigate('detail');
+}
+
+function renderGreenViz(ex) {
+  const balls = ex.puttsPerSeries;
+  const r = 60;
+  const cx = 160, cy = 90;
+  let ballDots = '';
+  if (ex.icon === 'circle' || ex.icon === 'pressure' || ex.icon === 'random') {
+    for (let i = 0; i < Math.min(balls,8); i++) {
+      const angle = (i / Math.min(balls,8)) * Math.PI * 2;
+      const bx = cx + Math.cos(angle) * r;
+      const by = cy + Math.sin(angle) * (r * 0.55);
+      ballDots += `<circle cx="${bx}" cy="${by}" r="7" fill="white" opacity=".9"/>`;
+    }
+  } else if (ex.icon === 'ladder') {
+    for (let i = 0; i < 5; i++) {
+      ballDots += `<circle cx="${40 + i*56}" cy="${cy - 10 + i*8}" r="7" fill="white" opacity=".9"/>`;
+    }
+  } else {
+    for (let i = 0; i < Math.min(balls,6); i++) {
+      const angle = (i / Math.min(balls,6)) * Math.PI * 2;
+      const bx = cx + Math.cos(angle) * r;
+      const by = cy + Math.sin(angle) * (r*0.55);
+      ballDots += `<circle cx="${bx}" cy="${by}" r="7" fill="white" opacity=".9"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 320 180" fill="none">
+    <rect width="320" height="180" fill="#101c10"/>
+    <ellipse cx="${cx}" cy="${cy}" rx="${r+18}" ry="${(r+18)*0.6}" fill="#1a3a1a" stroke="#2a5a2a" stroke-width="1"/>
+    <ellipse cx="${cx}" cy="${cy}" rx="${r+2}" ry="${(r+2)*0.55}" fill="none" stroke="#3a6a3a" stroke-width="1" stroke-dasharray="4 3" opacity=".6"/>
+    <circle cx="${cx}" cy="${cy}" r="7" fill="#0a0a0a" stroke="#4db84d" stroke-width="1.5"/>
+    <rect x="${cx-1}" y="${cy-22}" width="2" height="18" fill="#4db84d"/>
+    <path d="${cx+2},${cy-22} L${cx+14},${cy-17} L${cx+2},${cy-12} Z" fill="#4db84d"/>
+    ${ballDots}
+  </svg>`;
+}
+
+/* ═══════════════════════════════════════════
+   SESSION
+═══════════════════════════════════════════ */
+function startSession(id) {
+  const ex = EXERCISES.find(e => e.id === id);
+  session = {
+    exercise: ex,
+    series: 1,
+    putts: [],
+    seriePutts: [],
+    totalMade: 0,
+    totalAttempts: 0,
+    maxStreak: 0,
+    curStreak: 0,
+    startTime: Date.now(),
+    history: []
+  };
+  renderSession();
+  navigate('session');
+}
+
+function renderSession() {
+  const ex = session.exercise;
+  document.getElementById('sess-ex-name').textContent = ex.name;
+  document.getElementById('sess-serie-cur').textContent = session.series;
+  document.getElementById('sess-serie-tot').textContent = ex.series;
+  document.getElementById('sess-total').textContent = ex.puttsPerSeries;
+  updateSessionUI();
+}
+
+function updateSessionUI() {
+  const ex = session.exercise;
+  const made = session.seriePutts.filter(p=>p).length;
+  document.getElementById('sess-made').textContent = made;
+
+  // dots
+  const row = document.getElementById('dot-row');
+  row.innerHTML = '';
+  for (let i = 0; i < ex.puttsPerSeries; i++) {
+    const d = document.createElement('div');
+    d.className = 'pdot';
+    if (i < session.seriePutts.length) {
+      d.classList.add(session.seriePutts[i] ? 'made' : 'missed');
+    }
+    row.appendChild(d);
+  }
+
+  // stats
+  const tot = session.totalAttempts;
+  const totMade = session.totalMade;
+  const pct = tot > 0 ? Math.round(totMade / tot * 100) : 0;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  document.getElementById('stat-streak').textContent = session.maxStreak;
+  document.getElementById('stat-score').textContent = totMade + '/' + tot;
+}
+
+function recordPutt(made) {
+  const ex = session.exercise;
+  session.seriePutts.push(made);
+  session.totalAttempts++;
+  if (made) {
+    session.totalMade++;
+    session.curStreak++;
+    session.maxStreak = Math.max(session.maxStreak, session.curStreak);
+  } else {
+    session.curStreak = 0;
+  }
+
+  // Flash
+  const fl = document.getElementById('flash');
+  fl.className = made ? 'g' : 'r';
+  setTimeout(() => fl.className = '', 300);
+
+  // Vibration
+  if (navigator.vibrate) navigator.vibrate(made ? [30] : [60,30,60]);
+
+  updateSessionUI();
+
+  // Check serie complete
+  if (session.seriePutts.length >= ex.puttsPerSeries) {
+    const madeCount = session.seriePutts.filter(p=>p).length;
+    session.history.push([...session.seriePutts]);
+    session.putts = session.putts.concat(session.seriePutts);
+
+    if (session.series >= ex.series) {
+      setTimeout(() => endSession(), 400);
+    } else {
+      session.series++;
+      session.seriePutts = [];
+      setTimeout(() => {
+        document.getElementById('sess-serie-cur').textContent = session.series;
+        updateSessionUI();
+      }, 300);
+    }
+  }
+}
+
+function confirmEndSession() {
+  if (confirm('Terminer la session maintenant ?')) endSession();
+}
+
+function endSession() {
+  const ex = session.exercise;
+  const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
+  const mins = Math.floor(elapsed / 60).toString().padStart(2,'0');
+  const secs = (elapsed % 60).toString().padStart(2,'0');
+  const pct = session.totalAttempts > 0 ? Math.round(session.totalMade / session.totalAttempts * 100) : 0;
+
+  // Save session
+  const sessionData = {
+    exercise: ex.name,
+    date: new Date().toLocaleDateString('fr-FR'),
+    score: session.totalMade + '/' + session.totalAttempts,
+    pct,
+    maxStreak: session.maxStreak,
+    time: mins + ':' + secs,
+    history: session.history,
+    series: session.series + '/' + ex.series
+  };
+  appData.sessions.unshift(sessionData);
+  if (appData.sessions.length > 100) appData.sessions.pop();
+
+  // XP
+  let xpGain = 50;
+  if (pct >= 90) xpGain += 30;
+  if (pct === 100) xpGain += 20;
+  xpGain += session.series * 5;
+  appData.xp += xpGain;
+  while (appData.xp >= appData.level * 100 + 100) {
+    appData.xp -= appData.level * 100 + 100;
+    appData.level++;
+  }
+
+  // Update putting index (simplified)
+  const piChange = pct >= 80 ? -0.2 : pct >= 60 ? 0 : 0.3;
+  appData.putting_index = Math.max(0, +(appData.putting_index + piChange).toFixed(1));
+
+  saveData();
+  renderResume(sessionData, xpGain, pct);
+  navigate('resume');
+}
+
+function renderResume(s, xp, pct) {
+  document.getElementById('resume-score').textContent = s.score;
+  document.getElementById('resume-pct').textContent = pct + '%';
+  document.getElementById('resume-xp').textContent = '+' + xp;
+  document.getElementById('res-series').textContent = s.series;
+  document.getElementById('res-streak').textContent = s.maxStreak;
+  document.getElementById('res-time').textContent = s.time;
+
+  const isRecord = pct >= 90 && appData.sessions.length === 1;
+  document.getElementById('resume-record').style.display = (pct === 100 || session.maxStreak > 10) ? 'inline-block' : 'none';
+
+  // Ring animation
+  const circumference = 440;
+  const offset = circumference - (pct / 100) * circumference;
+  const ring = document.getElementById('ring-fill');
+  ring.style.strokeDashoffset = circumference;
+  setTimeout(() => { ring.style.transition = 'stroke-dashoffset 1s ease'; ring.style.strokeDashoffset = offset; }, 100);
+
+  // History sets
+  const hsets = document.getElementById('hist-sets');
+  hsets.innerHTML = session.history.map(serie =>
+    `<div class="hset">${serie.map(p=>`<div class="hdot ${p?'m':'x'}">${p?'✓':'✕'}</div>`).join('')}</div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════════
+   HOME
+═══════════════════════════════════════════ */
+function renderHome() {
+  document.getElementById('home-username').textContent = appData.username;
+  document.getElementById('home-level').textContent = `Niveau ${appData.level} · ${appData.xp} XP`;
+  document.getElementById('home-streak').textContent = appData.streak;
+
+  const last = appData.sessions[0];
+  if (last) {
+    document.getElementById('last-name').textContent = last.exercise;
+    document.getElementById('last-score').textContent = last.score;
+    document.getElementById('last-pct').textContent = last.pct + '%';
+    document.getElementById('last-date').textContent = last.date;
+  }
+
+  // Sparkline
+  renderSparkline();
+}
+
+function renderSparkline() {
+  const data = appData.sessions.length > 1
+    ? appData.sessions.slice(0, 10).reverse().map(s => s.pct)
+    : [65, 70, 68, 75, 80, 78, 85, 82, 89, 93];
+
+  const w = 200, h = 36;
+  const min = Math.min(...data) - 5;
+  const max = Math.max(...data) + 5;
+  const pts = data.map((v,i) => ({
+    x: (i / (data.length-1)) * w,
+    y: h - ((v - min) / (max - min)) * h
+  }));
+  const line = pts.map((p,i) => (i===0?'M':'L') + p.x + ',' + p.y).join(' ');
+  const area = line + ` L${w},${h} L0,${h} Z`;
+  document.getElementById('spark-path').setAttribute('d', area);
+  document.getElementById('spark-line').setAttribute('d', line);
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESSION
+═══════════════════════════════════════════ */
+function renderProgression() {
+  document.getElementById('pi-num').textContent = appData.putting_index;
+  const sessions = appData.sessions;
+  document.getElementById('ov-sessions').textContent = sessions.length || 28;
+  const totalPutts = sessions.reduce((a,s) => a + parseInt(s.score.split('/')[1]||0), 0);
+  document.getElementById('ov-putts').textContent = totalPutts || 523;
+  document.getElementById('ov-time').textContent = sessions.length ? (sessions.length * 7) + 'min' : '14h32';
+
+  renderChart('30j');
+  renderDistList();
+  renderRecords();
+  renderPiSpark();
+}
+
+function renderPiSpark() {
+  const data = [12.4, 12.1, 11.9, 11.7, 11.5, 11.3, 11.2];
+  const w = 100, h = 48;
+  const min = Math.min(...data) - 0.2, max = Math.max(...data) + 0.2;
+  const pts = data.map((v,i) => ({
+    x: (i/(data.length-1))*w,
+    y: h - ((v-min)/(max-min))*h
+  }));
+  const line = pts.map((p,i)=>(i===0?'M':'L')+p.x+','+p.y).join(' ');
+  const area = line + ` L${w},${h} L0,${h} Z`;
+  const el = document.getElementById('pi-spark');
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" fill="none">
+    <defs><linearGradient id="pig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4db84d" stop-opacity=".25"/>
+      <stop offset="100%" stop-color="#4db84d" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#pig)"/>
+    <path d="${line}" stroke="#4db84d" stroke-width="1.5" fill="none"/>
+  </svg>`;
+}
+
+let currentChartPeriod = '30j';
+const CHART_DATA = {
+  '7j':  [11.8,11.7,11.6,11.5,11.4,11.3,11.2],
+  '30j': [12.4,12.3,12.1,12.0,11.9,11.8,11.7,11.6,11.5,11.4,11.3,11.2],
+  '3m':  [13.1,12.8,12.5,12.3,12.1,11.9,11.7,11.5,11.3,11.2],
+  '1a':  [14.0,13.5,13.1,12.8,12.5,12.2,12.0,11.8,11.6,11.4,11.3,11.2]
+};
+
+function switchChart(btn, period) {
+  document.querySelectorAll('.chart-tabs .pill-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart(period);
+}
+
+function renderChart(period) {
+  const data = CHART_DATA[period] || CHART_DATA['30j'];
+  const el = document.getElementById('chart-area');
+  const w = 280, h = 108;
+  const min = Math.min(...data) - 0.5, max = Math.max(...data) + 0.5;
+  const pts = data.map((v,i)=>({
+    x: (i/(data.length-1))*w,
+    y: h - ((v-min)/(max-min))*h
+  }));
+  const line = pts.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+  const area = line + ` L${w},${h} L0,${h} Z`;
+
+  // Grid lines
+  const gridLines = [0,0.25,0.5,0.75,1].map(t=>{
+    const y = (h*t).toFixed(1);
+    const val = (max - t*(max-min)).toFixed(1);
+    return `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+            <text x="${w+4}" y="${parseFloat(y)+4}" font-size="9" fill="rgba(255,255,255,.3)" font-family="Oswald,sans-serif">${val}</text>`;
+  }).join('');
+
+  el.innerHTML = `<svg viewBox="0 0 ${w+30} ${h+4}" fill="none" style="width:100%;height:100%">
+    <defs>
+      <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#4db84d" stop-opacity=".2"/>
+        <stop offset="100%" stop-color="#4db84d" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    <path d="${area}" fill="url(#cg)"/>
+    <path d="${line}" stroke="#4db84d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="${pts[pts.length-1].x.toFixed(1)}" cy="${pts[pts.length-1].y.toFixed(1)}" r="4" fill="#4db84d"/>
+  </svg>`;
+}
+
+function switchProgTab(tab, panelId) {
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.ptab-panel').forEach(p=>p.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+function switchDistTab(btn, id) {
+  document.querySelectorAll('.dist-tab-row .pill-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dt-pct').style.display = id==='dt-pct'?'flex':'none';
+  document.getElementById('dt-nb').style.display = id==='dt-nb'?'flex':'none';
+}
+
+function renderDistList() {
+  const pctList = document.getElementById('dt-pct');
+  const nbList = document.getElementById('dt-nb');
+  pctList.innerHTML = DIST_DATA.map(d=>`
+    <div class="dist-item">
+      <div class="dist-hdr">
+        <span class="dist-name">${d.dist}</span>
+        <span class="dist-pct">${d.pct}%</span>
+      </div>
+      <div class="dist-bar">
+        <div class="dist-fill" style="width:${d.pct}%;background:${d.color}"></div>
+      </div>
+    </div>
+  `).join('');
+  nbList.innerHTML = DIST_DATA.map(d=>`
+    <div class="dist-item">
+      <div class="dist-hdr">
+        <span class="dist-name">${d.dist}</span>
+        <span class="dist-pct">${d.nb}</span>
+      </div>
+      <div class="dist-bar">
+        <div class="dist-fill" style="width:${Math.round(d.nb/156*100)}%;background:${d.color}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderRecords() {
+  const all = [...RECORDS_DATA];
+  const s = appData.sessions[0];
+  if (s) {
+    all[0].val = session.maxStreak > 0 ? session.maxStreak + ' putts' : all[0].val;
+  }
+  document.getElementById('records-list').innerHTML = all.map(r=>`
+    <div class="rec-row">
+      <div class="rec-ico">${r.icon}</div>
+      <div class="rec-body">
+        <div class="rec-title">${r.title}</div>
+        <div class="rec-val">${r.val}</div>
+        <div class="rec-sub">${r.sub}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════ */
+function saveData() {
+  localStorage.setItem('putttracker_data', JSON.stringify(appData));
+}
+
+function resetData() {
+  if (confirm('Réinitialiser toutes les données ?')) {
+    localStorage.removeItem('putttracker_data');
+    location.reload();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+renderExList();
+renderHome();
+</script>
+</body>
+</html>
