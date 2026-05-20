@@ -1176,6 +1176,38 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     </div>
   </div>
 
+
+  <!-- ══════════════════════════════════
+       SCREEN: ONBOARDING
+  ══════════════════════════════════ -->
+  <div id="s-onboarding" class="screen full" style="display:none;align-items:center;justify-content:center;padding:40px 24px;">
+    <div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:28px;">
+      <div class="logo-icon" style="width:80px;height:80px;border-radius:24px;">
+        <svg viewBox="0 0 38 42" fill="none" width="46" height="46">
+          <path d="M10 6 L10 36" stroke="url(#lg_ob)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M10 6 Q26 6 26 16 Q26 26 10 26" stroke="url(#lg_ob)" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <ellipse cx="19" cy="38" rx="9" ry="2.5" fill="rgba(255,255,255,.18)"/>
+          <defs><linearGradient id="lg_ob" x1="10" y1="6" x2="26" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#6dd96d"/><stop offset="100%" stop-color="#4db84d"/>
+          </linearGradient></defs>
+        </svg>
+      </div>
+      <div style="text-align:center;">
+        <div class="logo-name" style="font-size:30px;">PUTTTRACKER</div>
+        <div class="logo-tagline" style="margin-top:6px;">DEVENEZ MEILLEUR SUR <em>CHAQUE PUTT</em></div>
+      </div>
+      <div style="width:100%;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--green-hi);margin-bottom:10px;">VOTRE PRÉNOM</div>
+        <input id="onboarding-name" type="text" placeholder="Ex: Steven"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px 18px;font-size:18px;color:var(--white);font-family:var(--font-b);outline:none;-webkit-appearance:none;"
+          oninput="document.getElementById('ob-name-error').style.display='none'"
+        />
+        <div id="ob-name-error" style="display:none;color:var(--red-hi);font-size:12px;margin-top:6px;padding-left:4px;">Entrez votre prénom pour continuer.</div>
+      </div>
+      <button class="btn-green" onclick="submitOnboarding()" style="margin-top:4px;">COMMENCER →</button>
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════
        BOTTOM NAV
   ══════════════════════════════════ -->
@@ -1349,12 +1381,12 @@ let session = {
 
 /* App state */
 let appData = JSON.parse(localStorage.getItem('putttracker_data') || 'null') || {
-  username: 'Steven',
-  level: 3,
-  xp: 340,
-  streak: 3,
+  username: '',
+  level: 1,
+  xp: 0,
+  streak: 0,
   sessions: [],
-  putting_index: 11.2
+  putting_index: 15.0
 };
 
 /* ═══════════════════════════════════════════
@@ -1866,6 +1898,17 @@ function saveData() {
   localStorage.setItem('putttracker_data', JSON.stringify(appData));
 }
 
+function submitOnboarding() {
+  const name = document.getElementById('onboarding-name').value.trim();
+  if (!name) {
+    document.getElementById('ob-name-error').style.display = 'block';
+    return;
+  }
+  appData.username = name;
+  saveData();
+  navigate('home');
+}
+
 function resetData() {
   if (confirm('Réinitialiser toutes les données ? Cette action est irréversible.')) {
     localStorage.clear();
@@ -1877,8 +1920,18 @@ function resetData() {
    INIT
 ═══════════════════════════════════════════ */
 renderExList();
-renderHome();
-navigate("home");
+if (!appData.username) {
+  renderHome();
+  // show onboarding
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.display='none'; });
+  const ob = document.getElementById('s-onboarding');
+  ob.classList.add('active');
+  ob.style.display = 'flex';
+  document.getElementById('nav').classList.add('hidden');
+} else {
+  renderHome();
+  navigate('home');
+}
 </script>
 </body>
 </html>
