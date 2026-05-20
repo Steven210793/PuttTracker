@@ -1862,9 +1862,19 @@ function saveData() {
 }
 
 function resetData() {
-  if (confirm('Réinitialiser toutes les données ?')) {
+  if (confirm('Réinitialiser toutes les données ? Cette action est irréversible.')) {
     localStorage.removeItem('putttracker_data');
-    location.reload();
+    appData = {
+      username: 'Steven',
+      level: 1,
+      xp: 0,
+      streak: 0,
+      sessions: [],
+      putting_index: 15.0
+    };
+    saveData();
+    renderHome();
+    navigate('home');
   }
 }
 
