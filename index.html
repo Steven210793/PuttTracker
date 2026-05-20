@@ -1685,6 +1685,11 @@ function renderHome() {
     document.getElementById('last-score').textContent = last.score;
     document.getElementById('last-pct').textContent = last.pct + '%';
     document.getElementById('last-date').textContent = last.date;
+  } else {
+    document.getElementById('last-name').textContent = 'Aucune session';
+    document.getElementById('last-score').textContent = '-';
+    document.getElementById('last-pct').textContent = '-';
+    document.getElementById('last-date').textContent = '-';
   }
 
   // Sparkline
@@ -1873,7 +1878,21 @@ function resetData() {
       putting_index: 15.0
     };
     saveData();
-    renderHome();
+
+    // Reset UI directly
+    document.getElementById('home-username').textContent = appData.username;
+    document.getElementById('home-level').textContent = `Niveau ${appData.level} · ${appData.xp} XP`;
+    document.getElementById('home-streak').textContent = appData.streak;
+    document.getElementById('last-name').textContent = '-';
+    document.getElementById('last-score').textContent = '-';
+    document.getElementById('last-pct').textContent = '-';
+    document.getElementById('last-date').textContent = '-';
+
+    // Reset profil
+    document.getElementById('prof-level').textContent = appData.level;
+    document.getElementById('prof-xp').textContent = appData.xp + ' XP';
+    document.getElementById('xp-bar').style.width = '0%';
+
     navigate('home');
   }
 }
