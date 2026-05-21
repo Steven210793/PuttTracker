@@ -403,7 +403,7 @@ function loadFixtures(force) {
   // Charger PGA Tour (2) + DP World Tour (1) en parallele
   Promise.all([
     apiCall("/fixtures/2/2026"),
-    Promise.all([apiCall('/fixtures/1/2026'),apiCall('/fixtures/1/2025')]).then(function(r){return{results:(r[0].results||[]).concat(r[1].results||[])};}).catch(function(){return{results:[]};})
+    apiCall('/fixtures/1/2025').catch(function(){return{results:[]};})
   ]).then(function(responses) {
     var now = new Date();
     var allResults = [];
@@ -486,7 +486,7 @@ function renderProchains() {
   var h = "";
   list.forEach(function(t) {
     h += '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
-    h += '<div style="width:36px;height:36px;background:var(--card2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⛳</div>';
+    var logoColor = t.tour === 'DP' ? '#4A90E2' : '#E8233A'; var logoBg = t.tour === 'DP' ? 'rgba(74,144,226,0.15)' : 'rgba(232,35,58,0.15)'; h += '<div style="width:40px;height:40px;background:' + logoBg + ';border:1.5px solid ' + logoColor + ';border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-family:var(--fd);font-size:10px;font-weight:900;color:' + logoColor + ';letter-spacing:0.5px;">' + (t.tour || 'PGA') + '</span></div>';
     var tourColor = t.tour === 'DP' ? '#4A90E2' : '#E8233A';
     var tourBg    = t.tour === 'DP' ? 'rgba(74,144,226,0.15)' : 'rgba(232,35,58,0.15)';
     h += '<div style="flex:1;">';
