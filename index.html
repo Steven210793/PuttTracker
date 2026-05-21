@@ -487,8 +487,14 @@ function renderProchains() {
   list.forEach(function(t) {
     h += '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
     h += '<div style="width:36px;height:36px;background:var(--card2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⛳</div>';
-    h += '<div><div style="font-family:var(--fd);font-size:15px;font-weight:700;">' + t.name + '</div>';
-    h += '<div style="font-size:12px;color:var(--muted);margin-top:1px;">' + fmtDate(t.start) + ' — ' + fmtDate(t.end) + '</div></div>';
+    var tourColor = t.tour === 'DP' ? '#4A90E2' : '#E8233A';
+    var tourBg    = t.tour === 'DP' ? 'rgba(74,144,226,0.15)' : 'rgba(232,35,58,0.15)';
+    h += '<div style="flex:1;">';
+    h += '<div style="font-family:var(--fd);font-size:15px;font-weight:700;">' + t.name + '</div>';
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-top:3px;">';
+    h += '<span style="font-size:10px;background:' + tourBg + ';color:' + tourColor + ';padding:2px 7px;border-radius:6px;font-family:var(--fd);font-weight:800;letter-spacing:1px;">' + (t.tour || 'PGA') + '</span>';
+    h += '<span style="font-size:12px;color:var(--muted);">' + fmtDate(t.start) + ' — ' + fmtDate(t.end) + '</span>';
+    h += '</div></div>';
     h += '</div>';
   });
   el.innerHTML = h;
