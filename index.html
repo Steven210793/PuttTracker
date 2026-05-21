@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Sunday Picks"/>
 <link rel="apple-touch-icon" href="https://i.imgur.com/qaj1nmJ.png"/>
 <link rel="icon" href="https://i.imgur.com/qaj1nmJ.png"/>
-<title>Sunday Picks</title>
+<title>Sunday Picks v4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -324,7 +324,7 @@ var S = {
 
 function loadS() {
   try {
-    var d = JSON.parse(localStorage.getItem("sp_v3") || "{}");
+    var d = JSON.parse(localStorage.getItem("sp_v4") || "{}");
     S.pseudo  = d.pseudo  || "";
     S.pts     = d.pts     || 0;
     S.history = d.history || [];
@@ -335,7 +335,7 @@ function loadS() {
 }
 
 function saveS() {
-  localStorage.setItem("sp_v3", JSON.stringify({
+  localStorage.setItem("sp_v4", JSON.stringify({
     pseudo: S.pseudo, pts: S.pts, history: S.history,
     tid: S.tid, picks: S.picks, saved: S.saved
   }));
@@ -1113,7 +1113,7 @@ function savePseudo() {
 // ============================================================
 function resetApp() {
   if (!confirm("Effacer toutes tes donnees ?")) return;
-  localStorage.removeItem("sp_v3");
+  localStorage.removeItem("sp_v4");
   location.reload();
 }
 
