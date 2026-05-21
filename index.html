@@ -480,7 +480,7 @@ function renderProchains() {
   var now = new Date();
   var list = S.fixtures.filter(function(f) { return f.id !== S.tid && f.end >= now; }).slice(0, 6);
   if (!list.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px;">Aucun tournoi a venir</div>';
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px;">Total fixtures: ' + S.fixtures.length + ' — Aucun a venir</div>';
     return;
   }
   var h = "";
