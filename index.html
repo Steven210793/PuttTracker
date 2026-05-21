@@ -403,7 +403,7 @@ function loadFixtures(force) {
   // Charger PGA Tour (2) + DP World Tour (1) en parallele
   Promise.all([
     apiCall("/fixtures/2/2026"),
-    apiCall("/fixtures/1/2026").catch(function() { return { results: [] }; })
+    Promise.all([apiCall('/fixtures/1/2026'),apiCall('/fixtures/1/2025')]).then(function(r){return{results:(r[0].results||[]).concat(r[1].results||[])};}).catch(function(){return{results:[]};})
   ]).then(function(responses) {
     var now = new Date();
     var allResults = [];
