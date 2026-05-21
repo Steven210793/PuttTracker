@@ -478,7 +478,7 @@ function renderProchains() {
   var el = document.getElementById("h-prochains");
   if (!el) return;
   var now = new Date();
-  var list = S.fixtures.filter(function(f) { return f.id !== S.tid && f.start > now; }).slice(0, 4);
+  var list = S.fixtures.filter(function(f) { return f.id !== S.tid && f.end >= now; }).slice(0, 6);
   if (!list.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px;">Aucun tournoi a venir</div>';
     return;
